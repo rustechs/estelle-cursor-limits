@@ -73,12 +73,34 @@ read_inotify_min() {
   echo "${from_env:-${from_file:-524288}}"
 }
 
+validate_inotify_min() {
+  local value="$1"
+  [[ "${value}" =~ ^[0-9]+$ ]] || die "CURSOR_INOTIFY_MIN_WATCHES must be a positive integer (got: ${value})"
+  [[ "${value}" -gt 0 ]] || die "CURSOR_INOTIFY_MIN_WATCHES must be greater than zero (got: ${value})"
+}
+
+inotify_sysctl_dst() {
+  echo "${ESTELLE_SYSCTL_DST:-/etc/sysctl.d/99-estelle-cursor-inotify.conf}"
+}
+
+render_inotify_sysctl() {
+  local min_watches="$1"
+  local template="${ROOT}/sysctl/99-estelle-cursor-inotify.conf"
+  if [[ ! -f "${template}" ]]; then
+    die "missing sysctl template: ${template}"
+  fi
+  sed "s/@MAX_USER_WATCHES@/${min_watches}/g" "${template}"
+}
+
 maybe_install_inotify_sysctl() {
-  local min_watches current dst src
-  dst="/etc/sysctl.d/99-estelle-cursor-inotify.conf"
-  src="${ROOT}/sysctl/99-estelle-cursor-inotify.conf"
+  local min_watches current dst rendered_tmp
+  dst="$(inotify_sysctl_dst)"
   min_watches="$(read_inotify_min)"
+  validate_inotify_min "${min_watches}"
   current="$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo 0)"
+  rendered_tmp="$(mktemp)"
+  render_inotify_sysctl "${min_watches}" >"${rendered_tmp}"
+  trap 'rm -f "${rendered_tmp}"' RETURN
 
   if [[ "${SKIP_INOTIFY_SYSCTL:-}" == "1" ]]; then
     if [[ "${current}" -lt "${min_watches}" ]]; then
@@ -87,15 +109,11 @@ maybe_install_inotify_sysctl() {
     return 0
   fi
 
-  if [[ "${current}" -ge "${min_watches}" ]] && { [[ ! -f "${dst}" ]] || cmp -s "${src}" "${dst}"; }; then
+  if [[ "${current}" -ge "${min_watches}" ]] && { [[ ! -f "${dst}" ]] || cmp -s "${rendered_tmp}" "${dst}"; }; then
     return 0
   fi
 
-  if [[ ! -f "${src}" ]]; then
-    die "missing sysctl template: ${src}"
-  fi
-
-  if [[ -f "${dst}" ]] && ! cmp -s "${src}" "${dst}"; then
+  if [[ -f "${dst}" ]] && ! cmp -s "${rendered_tmp}" "${dst}"; then
     echo "install.sh: note: custom ${dst} present; applying sysctl --system without overwriting." >&2
     pkexec sysctl --system >/dev/null
     current="$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo 0)"
@@ -106,7 +124,7 @@ maybe_install_inotify_sysctl() {
     return 0
   fi
 
-  if [[ -f "${dst}" ]] && cmp -s "${src}" "${dst}"; then
+  if [[ -f "${dst}" ]] && cmp -s "${rendered_tmp}" "${dst}"; then
     echo "install.sh: applying existing ${dst} (current max_user_watches=${current})..." >&2
     pkexec sysctl --system >/dev/null
     return 0
@@ -114,7 +132,7 @@ maybe_install_inotify_sysctl() {
 
   echo "Installing ${dst} (max_user_watches ${current} -> ${min_watches})..."
   echo "  Approve the PolicyKit prompt for estelle-cursor-limits sysctl."
-  pkexec bash -c "install -m 0644 '${src}' '${dst}' && sysctl --system >/dev/null"
+  pkexec bash -c "install -d \"$(dirname "${dst}")\" && install -m 0644 \"${rendered_tmp}\" \"${dst}\" && sysctl --system >/dev/null"
 }
 
 install -d "${BIN_DIR}" "${UNIT_DIR}" "${APPS_DIR}" "${CONF_DIR}"
@@ -162,7 +180,7 @@ echo "  Agent (capped): agent"
 echo "  Agent (raw):    agent-raw   (alias: agent-unlimited — see contrib/bashrc.snippet)"
 echo "  Monitor:        systemctl --user status cursor.slice"
 current="$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo '?')"
-inotify_dst="/etc/sysctl.d/99-estelle-cursor-inotify.conf"
+inotify_dst="$(inotify_sysctl_dst)"
 if [[ -f "${inotify_dst}" ]]; then
   echo "  inotify watches: ${current} (drop-in: ${inotify_dst})"
 else
