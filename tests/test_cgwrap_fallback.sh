@@ -2,9 +2,9 @@
 # cursor-cgwrap falls back when systemd-run is unavailable.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-TMP="$(mktemp -d)"
-trap '/bin/rm -rf "${TMP}"' EXIT
+# shellcheck source=lib/common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
+estelle_test_begin "test_cgwrap_fallback"
 
 export HOME="${TMP}/home"
 mkdir -p "${HOME}/.local/bin"
@@ -25,7 +25,9 @@ chmod +x "${HOME}/.local/bin/agent-raw"
 # PATH with bash/env but without systemd-run (/bin and /usr/bin both ship it).
 out="$(env PATH="${SHIM}:${HOME}/.local/bin" AGENT_BIN="${HOME}/.local/bin/agent-raw" \
   "${HOME}/.local/bin/cursor-cgwrap" agent hello 2>&1)"
-echo "${out}" | grep -q 'cursor-cgwrap: systemd-run not found'
-echo "${out}" | grep -q 'agent-raw-stub hello'
+echo "${out}" | grep -q 'cursor-cgwrap: systemd-run not found' \
+  || fail "expected systemd-run not found message"
+echo "${out}" | grep -q 'agent-raw-stub hello' \
+  || fail "expected agent-raw-stub hello output"
 
 echo "cgwrap fallback test passed"
