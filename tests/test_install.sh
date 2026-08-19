@@ -18,7 +18,7 @@ export XDG_RUNTIME_DIR="${TMP}/runtime"
 mkdir -p "${XDG_RUNTIME_DIR}"
 chmod 700 "${XDG_RUNTIME_DIR}"
 
-"${ROOT}/install.sh" >"${TMP}/install-out.txt" 2>&1 || {
+bash "${ROOT}/install.sh" >"${TMP}/install-out.txt" 2>&1 || {
   cat "${TMP}/install-out.txt" >&2
   exit 1
 }
@@ -38,10 +38,10 @@ test -f "${HOME}/.config/cursor-limits/env"
 
 # Second install keeps custom desktop unless forced
 echo 'sentinel=desktop' > "${HOME}/.local/share/applications/cursor.desktop"
-"${ROOT}/install.sh" >/dev/null
+bash "${ROOT}/install.sh" >/dev/null
 grep -q 'sentinel=desktop' "${HOME}/.local/share/applications/cursor.desktop"
 
-FORCE_CURSOR_DESKTOP=1 "${ROOT}/install.sh" >/dev/null
+FORCE_CURSOR_DESKTOP=1 bash "${ROOT}/install.sh" >/dev/null
 if grep -q 'sentinel=desktop' "${HOME}/.local/share/applications/cursor.desktop"; then
   echo "FORCE_CURSOR_DESKTOP did not replace desktop file" >&2
   exit 1
@@ -55,7 +55,7 @@ cat >"${MIG_HOME}/.local/bin/agent" <<'EOF'
 echo legacy-agent "$@"
 EOF
 chmod +x "${MIG_HOME}/.local/bin/agent"
-HOME="${MIG_HOME}" XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR}" "${ROOT}/install.sh" >/dev/null
+HOME="${MIG_HOME}" XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR}" bash "${ROOT}/install.sh" >/dev/null
 test -L "${MIG_HOME}/.local/bin/agent-raw"
 readlink -f "${MIG_HOME}/.local/bin/agent-raw" | grep -q '/\.local/bin/agent$' || \
   grep -q 'legacy-agent' "${MIG_HOME}/.local/bin/agent-raw"
