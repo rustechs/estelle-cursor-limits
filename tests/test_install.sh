@@ -14,6 +14,7 @@ fail() {
 export HOME="${TMP}/home"
 export XDG_CONFIG_HOME="${HOME}/.config"
 export XDG_DATA_HOME="${HOME}/.local/share"
+export SKIP_INOTIFY_SYSCTL=1
 mkdir -p "${HOME}/.local/share/cursor-agent/versions/2099.01.01-test"
 cat >"${HOME}/.local/share/cursor-agent/versions/2099.01.01-test/cursor-agent" <<'EOF'
 #!/usr/bin/env bash

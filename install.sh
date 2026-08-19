@@ -63,6 +63,60 @@ render_desktop() {
     "${ROOT}/applications/cursor.desktop"
 }
 
+read_inotify_min() {
+  local from_env from_file
+  from_file="$(grep '^CURSOR_INOTIFY_MIN_WATCHES=' "${ROOT}/etc/cursor-limits.env" 2>/dev/null | cut -d= -f2- || true)"
+  from_env=""
+  if [[ -f "${ENV_FILE}" ]]; then
+    from_env="$(grep '^CURSOR_INOTIFY_MIN_WATCHES=' "${ENV_FILE}" 2>/dev/null | cut -d= -f2- || true)"
+  fi
+  echo "${from_env:-${from_file:-524288}}"
+}
+
+maybe_install_inotify_sysctl() {
+  local min_watches current dst src
+  dst="/etc/sysctl.d/99-estelle-cursor-inotify.conf"
+  src="${ROOT}/sysctl/99-estelle-cursor-inotify.conf"
+  min_watches="$(read_inotify_min)"
+  current="$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo 0)"
+
+  if [[ "${SKIP_INOTIFY_SYSCTL:-}" == "1" ]]; then
+    if [[ "${current}" -lt "${min_watches}" ]]; then
+      echo "install.sh: note: inotify max_user_watches=${current} < ${min_watches} (SKIP_INOTIFY_SYSCTL=1)." >&2
+    fi
+    return 0
+  fi
+
+  if [[ "${current}" -ge "${min_watches}" ]] && { [[ ! -f "${dst}" ]] || cmp -s "${src}" "${dst}"; }; then
+    return 0
+  fi
+
+  if [[ ! -f "${src}" ]]; then
+    die "missing sysctl template: ${src}"
+  fi
+
+  if [[ -f "${dst}" ]] && ! cmp -s "${src}" "${dst}"; then
+    echo "install.sh: note: custom ${dst} present; applying sysctl --system without overwriting." >&2
+    pkexec sysctl --system >/dev/null
+    current="$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo 0)"
+    if [[ "${current}" -ge "${min_watches}" ]]; then
+      return 0
+    fi
+    echo "install.sh: warning: max_user_watches=${current} still below ${min_watches}; edit ${dst} manually or remove it and re-run install." >&2
+    return 0
+  fi
+
+  if [[ -f "${dst}" ]] && cmp -s "${src}" "${dst}"; then
+    echo "install.sh: applying existing ${dst} (current max_user_watches=${current})..." >&2
+    pkexec sysctl --system >/dev/null
+    return 0
+  fi
+
+  echo "Installing ${dst} (max_user_watches ${current} -> ${min_watches})..."
+  echo "  Approve the PolicyKit prompt for estelle-cursor-limits sysctl."
+  pkexec bash -c "install -m 0644 '${src}' '${dst}' && sysctl --system >/dev/null"
+}
+
 install -d "${BIN_DIR}" "${UNIT_DIR}" "${APPS_DIR}" "${CONF_DIR}"
 
 if candidate="$(resolve_agent_raw)"; then
@@ -100,8 +154,17 @@ else
   echo "install.sh: warning: systemctl --user unavailable; skipped daemon-reload." >&2
 fi
 
+maybe_install_inotify_sysctl
+
 echo "Installed estelle-cursor-limits."
 echo "  Launch IDE from app menu or: cursor-cgwrap cursor"
 echo "  Agent (capped): agent"
 echo "  Agent (raw):    agent-raw   (alias: agent-unlimited — see contrib/bashrc.snippet)"
 echo "  Monitor:        systemctl --user status cursor.slice"
+current="$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo '?')"
+inotify_dst="/etc/sysctl.d/99-estelle-cursor-inotify.conf"
+if [[ -f "${inotify_dst}" ]]; then
+  echo "  inotify watches: ${current} (drop-in: ${inotify_dst})"
+else
+  echo "  inotify watches: ${current}"
+fi
