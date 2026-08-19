@@ -2,16 +2,11 @@
 # Reject invalid CURSOR_INOTIFY_MIN_WATCHES before sysctl install.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 # shellcheck source=lib/setup_home.sh
-source "${ROOT}/tests/lib/setup_home.sh"
-TMP="$(mktemp -d)"
-trap 'rm -rf "${TMP}"' EXIT
-
-fail() {
-  echo "test_inotify_min: $*" >&2
-  exit 1
-}
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/setup_home.sh"
+estelle_test_begin "test_inotify_min"
 
 expect_invalid() {
   local value="$1"
