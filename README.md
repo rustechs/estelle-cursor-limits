@@ -17,7 +17,7 @@ Complements the global Cursor rule in
 | `agent` | Wrapper → `cursor-cgwrap agent` (default terminal entrypoint) |
 | `agent-raw` | Symlink to real `cursor-agent` (escape hatch) |
 | `cursor.desktop` | User override so the app menu launches through `cursor-cgwrap` |
-| `sysctl/99-estelle-cursor-inotify.conf` | Optional system limit for `fs.inotify.max_user_watches` (524288) |
+| `sysctl/99-estelle-cursor-inotify.conf` | Optional system limit for `fs.inotify.max_user_watches` (from `CURSOR_INOTIFY_MIN_WATCHES`, default 524288) |
 
 Default limits target an 8-core / 32 GiB box with browser + VM always running.
 
@@ -66,10 +66,11 @@ git clone git@github.com:rustechs/estelle-cursor-limits.git ~/git/estelle-cursor
 
 When `fs.inotify.max_user_watches` is below the configured minimum (default
 **524288**), install may prompt once via **PolicyKit** (`pkexec`) to install
-`/etc/sysctl.d/99-estelle-cursor-inotify.conf` (which sets **524288**). The
-`CURSOR_INOTIFY_MIN_WATCHES` value in `~/.config/cursor-limits/env` is the
-install threshold only; it does not change the drop-in file. An existing custom
-drop-in at that path is never overwritten.
+`/etc/sysctl.d/99-estelle-cursor-inotify.conf` with that limit. Override the
+value in `~/.config/cursor-limits/env` via `CURSOR_INOTIFY_MIN_WATCHES=…`
+(both install threshold and rendered drop-in). An existing custom drop-in at
+that path is never overwritten. To apply a higher ceiling after a prior install,
+remove the drop-in (`REMOVE_INOTIFY_SYSCTL=1 uninstall.sh`) and re-run install.
 
 Optional shell alias (see `contrib/bashrc.snippet`):
 

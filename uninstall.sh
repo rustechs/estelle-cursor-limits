@@ -6,6 +6,7 @@ BIN_DIR="${HOME}/.local/bin"
 UNIT_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/systemd/user"
 APPS_DIR="${HOME}/.local/share/applications"
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/cursor-limits"
+SYSCTL_DST="${ESTELLE_SYSCTL_DST:-/etc/sysctl.d/99-estelle-cursor-inotify.conf}"
 
 rm -f "${BIN_DIR}/cursor-cgwrap" "${BIN_DIR}/agent"
 # Leave agent-raw pointing at cursor-agent — other tools may still use it.
@@ -21,9 +22,9 @@ fi
 rm -f "${UNIT_DIR}/cursor.slice"
 rm -rf "${CONF_DIR}"
 
-if [[ "${REMOVE_INOTIFY_SYSCTL:-}" == "1" && -f /etc/sysctl.d/99-estelle-cursor-inotify.conf ]]; then
-  echo "Removing /etc/sysctl.d/99-estelle-cursor-inotify.conf ..."
-  pkexec bash -c "rm -f /etc/sysctl.d/99-estelle-cursor-inotify.conf && sysctl --system >/dev/null"
+if [[ "${REMOVE_INOTIFY_SYSCTL:-}" == "1" && -f "${SYSCTL_DST}" ]]; then
+  echo "Removing ${SYSCTL_DST} ..."
+  pkexec bash -c "rm -f \"${SYSCTL_DST}\" && sysctl --system >/dev/null"
 fi
 
 systemctl --user daemon-reload 2>/dev/null || true
