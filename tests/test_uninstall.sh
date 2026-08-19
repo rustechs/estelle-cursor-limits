@@ -3,6 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/setup_home.sh
+source "${ROOT}/tests/lib/setup_home.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
 
@@ -11,24 +13,13 @@ fail() {
   exit 1
 }
 
-setup_home() {
-  export HOME="${TMP}/home"
-  export XDG_CONFIG_HOME="${HOME}/.config"
-  export XDG_DATA_HOME="${HOME}/.local/share"
-  export XDG_RUNTIME_DIR="${TMP}/runtime"
+setup_case() {
+  estelle_test_setup_home "${TMP}"
   export ESTELLE_SYSCTL_DST="${TMP}/etc/sysctl.d/99-estelle-cursor-inotify.conf"
   export SKIP_INOTIFY_SYSCTL=1
-  mkdir -p "${HOME}/.local/share/cursor-agent/versions/2099.01.01-test"
-  cat >"${HOME}/.local/share/cursor-agent/versions/2099.01.01-test/cursor-agent" <<'EOF'
-#!/usr/bin/env bash
-echo cursor-agent-stub "$@"
-EOF
-  chmod +x "${HOME}/.local/share/cursor-agent/versions/2099.01.01-test/cursor-agent"
-  mkdir -p "${XDG_RUNTIME_DIR}"
-  chmod 700 "${XDG_RUNTIME_DIR}"
 }
 
-setup_home
+setup_case
 bash "${ROOT}/install.sh" >/dev/null
 
 test -x "${HOME}/.local/bin/cursor-cgwrap" || fail "precondition: cursor-cgwrap missing"
@@ -43,7 +34,7 @@ test ! -d "${HOME}/.config/cursor-limits" || fail "cursor-limits config dir not 
 test -L "${HOME}/.local/bin/agent-raw" || fail "agent-raw should remain"
 
 # Optional removals
-setup_home
+setup_case
 bash "${ROOT}/install.sh" >/dev/null
 echo 'desktop-sentinel' >"${HOME}/.local/share/applications/cursor.desktop"
 echo 'ignore-sentinel' >"${HOME}/.cursorignore"
@@ -52,11 +43,9 @@ test ! -f "${HOME}/.local/share/applications/cursor.desktop" || fail "desktop no
 test ! -f "${HOME}/.cursorignore" || fail "cursorignore not removed"
 
 # Sysctl install/removal via mock pkexec and test-only sysctl path
-setup_home
-MOCK_BIN="${TMP}/mock-bin"
-mkdir -p "${MOCK_BIN}" "$(dirname "${ESTELLE_SYSCTL_DST}")"
-ln -sf "${ROOT}/tests/lib/mock_pkexec.sh" "${MOCK_BIN}/pkexec"
-export PATH="${MOCK_BIN}:${PATH}"
+setup_case
+estelle_test_mock_pkexec "${TMP}"
+mkdir -p "$(dirname "${ESTELLE_SYSCTL_DST}")"
 unset SKIP_INOTIFY_SYSCTL
 mkdir -p "${HOME}/.config/cursor-limits"
 echo 'CURSOR_INOTIFY_MIN_WATCHES=999999' >"${HOME}/.config/cursor-limits/env"

@@ -21,6 +21,7 @@ run() {
 run install bash tests/test_install.sh
 run uninstall bash tests/test_uninstall.sh
 run sysctl-template bash tests/test_sysctl_template.sh
+run sysctl-upgrade bash tests/test_sysctl_upgrade.sh
 run inotify-min bash tests/test_inotify_min.sh
 run cgwrap-fallback bash tests/test_cgwrap_fallback.sh
 run shellcheck bash tests/test_shellcheck.sh

@@ -69,8 +69,9 @@ When `fs.inotify.max_user_watches` is below the configured minimum (default
 `/etc/sysctl.d/99-estelle-cursor-inotify.conf` with that limit. Override the
 value in `~/.config/cursor-limits/env` via `CURSOR_INOTIFY_MIN_WATCHES=…`
 (both install threshold and rendered drop-in). An existing custom drop-in at
-that path is never overwritten. To apply a higher ceiling after a prior install,
-remove the drop-in (`REMOVE_INOTIFY_SYSCTL=1 uninstall.sh`) and re-run install.
+that path with a **lower** limit is upgraded when you raise
+`CURSOR_INOTIFY_MIN_WATCHES` and re-run install; drop-ins with a **higher**
+limit are left unchanged.
 
 Optional shell alias (see `contrib/bashrc.snippet`):
 

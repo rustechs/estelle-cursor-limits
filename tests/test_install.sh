@@ -3,6 +3,8 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/setup_home.sh
+source "${ROOT}/tests/lib/setup_home.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
 
@@ -11,20 +13,8 @@ fail() {
   exit 1
 }
 
-export HOME="${TMP}/home"
-export XDG_CONFIG_HOME="${HOME}/.config"
-export XDG_DATA_HOME="${HOME}/.local/share"
+estelle_test_setup_home "${TMP}"
 export SKIP_INOTIFY_SYSCTL=1
-mkdir -p "${HOME}/.local/share/cursor-agent/versions/2099.01.01-test"
-cat >"${HOME}/.local/share/cursor-agent/versions/2099.01.01-test/cursor-agent" <<'EOF'
-#!/usr/bin/env bash
-echo cursor-agent-stub "$@"
-EOF
-chmod +x "${HOME}/.local/share/cursor-agent/versions/2099.01.01-test/cursor-agent"
-
-export XDG_RUNTIME_DIR="${TMP}/runtime"
-mkdir -p "${XDG_RUNTIME_DIR}"
-chmod 700 "${XDG_RUNTIME_DIR}"
 
 bash "${ROOT}/install.sh" >"${TMP}/install-out.txt" 2>&1 || {
   cat "${TMP}/install-out.txt" >&2
