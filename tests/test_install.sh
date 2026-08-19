@@ -2,16 +2,11 @@
 # Install into a temporary HOME and verify artifacts.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 # shellcheck source=lib/setup_home.sh
-source "${ROOT}/tests/lib/setup_home.sh"
-TMP="$(mktemp -d)"
-trap 'rm -rf "${TMP}"' EXIT
-
-fail() {
-  echo "test_install: $*" >&2
-  exit 1
-}
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/setup_home.sh"
+estelle_test_begin "test_install"
 
 estelle_test_setup_home "${TMP}"
 export SKIP_INOTIFY_SYSCTL=1
@@ -41,8 +36,7 @@ grep -q 'sentinel=desktop' "${HOME}/.local/share/applications/cursor.desktop"
 
 FORCE_CURSOR_DESKTOP=1 bash "${ROOT}/install.sh" >/dev/null
 if grep -q 'sentinel=desktop' "${HOME}/.local/share/applications/cursor.desktop"; then
-  echo "FORCE_CURSOR_DESKTOP did not replace desktop file" >&2
-  exit 1
+  fail "FORCE_CURSOR_DESKTOP did not replace desktop file"
 fi
 
 # Migration: existing raw agent before wrapper install (fresh HOME)

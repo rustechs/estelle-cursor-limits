@@ -2,16 +2,11 @@
 # Upgrade legacy single-line sysctl drop-ins when the value matches config.
 set -euo pipefail
 
-ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/common.sh
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/common.sh"
 # shellcheck source=lib/setup_home.sh
-source "${ROOT}/tests/lib/setup_home.sh"
-TMP="$(mktemp -d)"
-trap 'rm -rf "${TMP}"' EXIT
-
-fail() {
-  echo "test_sysctl_upgrade: $*" >&2
-  exit 1
-}
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)/lib/setup_home.sh"
+estelle_test_begin "test_sysctl_upgrade"
 
 estelle_test_setup_home "${TMP}"
 estelle_test_mock_pkexec "${TMP}"
