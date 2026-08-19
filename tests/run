@@ -18,7 +18,7 @@ run() {
   fi
 }
 
-run install bash tests/test_install.sh
+run install bash -x tests/test_install.sh
 run cgwrap-fallback bash tests/test_cgwrap_fallback.sh
 run shellcheck bash tests/test_shellcheck.sh
 
