@@ -1,0 +1,29 @@
+# Home-directory workspace guardrails (workspace root is often ~).
+# Keeps Cursor/ripgrep from walking the entire home tree.
+
+.git/
+.cache/
+.local/share/Trash/
+.local/share/cursor-agent/
+.local/share/cursor-compile-cache/
+.config/Cursor/logs/
+.cursor/projects/
+.cursor/worktrees/
+**/node_modules/
+**/.venv/
+**/venv/
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/target/
+**/dist/
+**/build/
+**/.next/
+**/.turbo/
+**/coverage/
+**/.git/
+**/vendor/
+**/*.qcow2
+**/*.iso
+**/snap/

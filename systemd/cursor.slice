@@ -1,0 +1,8 @@
+[Slice]
+# Shared cap for all Cursor windows, agents, and child ripgrep processes.
+CPUQuota=700%
+MemoryMax=18G
+MemoryHigh=14G
+TasksMax=768
+ManagedOOMMemoryPressure=kill
+ManagedOOMMemoryPressureLimit=60%
