@@ -21,6 +21,11 @@ fi
 rm -f "${UNIT_DIR}/cursor.slice"
 rm -rf "${CONF_DIR}"
 
+if [[ "${REMOVE_INOTIFY_SYSCTL:-}" == "1" && -f /etc/sysctl.d/99-estelle-cursor-inotify.conf ]]; then
+  echo "Removing /etc/sysctl.d/99-estelle-cursor-inotify.conf ..."
+  pkexec bash -c "rm -f /etc/sysctl.d/99-estelle-cursor-inotify.conf && sysctl --system >/dev/null"
+fi
+
 systemctl --user daemon-reload 2>/dev/null || true
 
 echo "Uninstalled estelle-cursor-limits (agent-raw left in place)."

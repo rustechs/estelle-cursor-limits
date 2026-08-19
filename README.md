@@ -17,6 +17,7 @@ Complements the global Cursor rule in
 | `agent` | Wrapper → `cursor-cgwrap agent` (default terminal entrypoint) |
 | `agent-raw` | Symlink to real `cursor-agent` (escape hatch) |
 | `cursor.desktop` | User override so the app menu launches through `cursor-cgwrap` |
+| `sysctl/99-estelle-cursor-inotify.conf` | Optional system limit for `fs.inotify.max_user_watches` (524288) |
 
 Default limits target an 8-core / 32 GiB box with browser + VM always running.
 
@@ -42,6 +43,7 @@ bin/agent                  wrapped agent entrypoint
 systemd/cursor.slice       user slice unit
 etc/cursor-limits.env      desktop extra args (Wayland on estelle)
 etc/cursorignore.example   optional ~/.cursorignore template
+sysctl/99-estelle-cursor-inotify.conf   optional inotify watch ceiling
 applications/cursor.desktop   @HOME@ / @EXTRA_ARGS@ template
 contrib/bashrc.snippet     agent-unlimited alias
 ```
@@ -62,6 +64,13 @@ git clone git@github.com:rustechs/estelle-cursor-limits.git ~/git/estelle-cursor
 ~/git/estelle-cursor-limits/install.sh
 ```
 
+When `fs.inotify.max_user_watches` is below the configured minimum (default
+**524288**), install may prompt once via **PolicyKit** (`pkexec`) to install
+`/etc/sysctl.d/99-estelle-cursor-inotify.conf` (which sets **524288**). The
+`CURSOR_INOTIFY_MIN_WATCHES` value in `~/.config/cursor-limits/env` is the
+install threshold only; it does not change the drop-in file. An existing custom
+drop-in at that path is never overwritten.
+
 Optional shell alias (see `contrib/bashrc.snippet`):
 
 ```bash
@@ -74,6 +83,12 @@ Replace an existing desktop launcher or `~/.cursorignore`:
 FORCE_CURSOR_DESKTOP=1 FORCE_CURSORIGNORE=1 ~/git/estelle-cursor-limits/install.sh
 ```
 
+Skip the sysctl step (CI, containers, or manual tuning):
+
+```bash
+SKIP_INOTIFY_SYSCTL=1 ~/git/estelle-cursor-limits/install.sh
+```
+
 ## Check
 
 ```bash
@@ -81,13 +96,14 @@ systemctl --user status cursor.slice
 systemctl --user show cursor.slice | grep -E '^(MemoryMax|CPUQuota|TasksMax)='
 cursor-cgwrap --help
 type agent agent-raw
+sysctl fs.inotify.max_user_watches
 ```
 
 ## Uninstall
 
 ```bash
 ~/git/estelle-cursor-limits/uninstall.sh
-# Optional: REMOVE_CURSOR_DESKTOP=1 REMOVE_CURSORIGNORE=1 uninstall.sh
+# Optional: REMOVE_CURSOR_DESKTOP=1 REMOVE_CURSORIGNORE=1 REMOVE_INOTIFY_SYSCTL=1 uninstall.sh
 ```
 
 ## Tests / CI
