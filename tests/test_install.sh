@@ -12,6 +12,8 @@ fail() {
 }
 
 export HOME="${TMP}/home"
+export XDG_CONFIG_HOME="${HOME}/.config"
+export XDG_DATA_HOME="${HOME}/.local/share"
 mkdir -p "${HOME}/.local/share/cursor-agent/versions/2099.01.01-test"
 cat >"${HOME}/.local/share/cursor-agent/versions/2099.01.01-test/cursor-agent" <<'EOF'
 #!/usr/bin/env bash
@@ -60,7 +62,8 @@ cat >"${MIG_HOME}/.local/bin/agent" <<'EOF'
 echo legacy-agent "$@"
 EOF
 chmod +x "${MIG_HOME}/.local/bin/agent"
-HOME="${MIG_HOME}" XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR}" bash "${ROOT}/install.sh" >/dev/null
+HOME="${MIG_HOME}" XDG_CONFIG_HOME="${MIG_HOME}/.config" XDG_DATA_HOME="${MIG_HOME}/.local/share" \
+  XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR}" bash "${ROOT}/install.sh" >/dev/null
 test -L "${MIG_HOME}/.local/bin/agent-raw"
 readlink -f "${MIG_HOME}/.local/bin/agent-raw" | grep -q '/\.local/bin/agent$' || \
   grep -q 'legacy-agent' "${MIG_HOME}/.local/bin/agent-raw"
