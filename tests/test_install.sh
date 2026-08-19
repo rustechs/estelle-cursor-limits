@@ -6,6 +6,11 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
 
+fail() {
+  echo "test_install: $*" >&2
+  exit 1
+}
+
 export HOME="${TMP}/home"
 mkdir -p "${HOME}/.local/share/cursor-agent/versions/2099.01.01-test"
 cat >"${HOME}/.local/share/cursor-agent/versions/2099.01.01-test/cursor-agent" <<'EOF'
@@ -20,12 +25,12 @@ chmod 700 "${XDG_RUNTIME_DIR}"
 
 bash "${ROOT}/install.sh" >"${TMP}/install-out.txt" 2>&1 || {
   cat "${TMP}/install-out.txt" >&2
-  exit 1
+  fail "install.sh exited non-zero"
 }
 
-test -x "${HOME}/.local/bin/cursor-cgwrap"
-test -x "${HOME}/.local/bin/agent"
-test -L "${HOME}/.local/bin/agent-raw"
+test -x "${HOME}/.local/bin/cursor-cgwrap" || fail "cursor-cgwrap missing"
+test -x "${HOME}/.local/bin/agent" || fail "agent wrapper missing"
+test -L "${HOME}/.local/bin/agent-raw" || fail "agent-raw symlink missing"
 grep -q 'cursor-agent-stub' "${HOME}/.local/bin/agent-raw" || readlink "${HOME}/.local/bin/agent-raw" | grep -q cursor-agent
 test -f "${HOME}/.config/systemd/user/cursor.slice"
 grep -q 'MemoryMax=18G' "${HOME}/.config/systemd/user/cursor.slice"

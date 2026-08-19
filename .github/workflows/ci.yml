@@ -22,5 +22,8 @@ jobs:
       - name: Install tools
         run: sudo apt-get update && sudo apt-get install -y --no-install-recommends shellcheck
 
+      - name: Ensure scripts are executable
+        run: chmod +x install.sh uninstall.sh tests/* bin/*
+
       - name: Run test suite
         run: ./tests/run
