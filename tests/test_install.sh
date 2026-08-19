@@ -18,7 +18,10 @@ export XDG_RUNTIME_DIR="${TMP}/runtime"
 mkdir -p "${XDG_RUNTIME_DIR}"
 chmod 700 "${XDG_RUNTIME_DIR}"
 
-"${ROOT}/install.sh" >"${TMP}/install-out.txt"
+"${ROOT}/install.sh" >"${TMP}/install-out.txt" 2>&1 || {
+  cat "${TMP}/install-out.txt" >&2
+  exit 1
+}
 
 test -x "${HOME}/.local/bin/cursor-cgwrap"
 test -x "${HOME}/.local/bin/agent"

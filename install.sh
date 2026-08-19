@@ -18,10 +18,11 @@ die() {
 
 load_extra_args() {
   local defaults extra
-  defaults="$(grep '^CURSOR_DESKTOP_EXTRA_ARGS=' "${ROOT}/etc/cursor-limits.env" | cut -d= -f2- || true)"
+  defaults="$(grep '^CURSOR_DESKTOP_EXTRA_ARGS=' "${ROOT}/etc/cursor-limits.env" 2>/dev/null | cut -d= -f2- || true)"
   extra="${defaults}"
   if [[ -f "${ENV_FILE}" ]]; then
-    extra="$(grep '^CURSOR_DESKTOP_EXTRA_ARGS=' "${ENV_FILE}" | cut -d= -f2- || echo "${defaults}")"
+    extra="$(grep '^CURSOR_DESKTOP_EXTRA_ARGS=' "${ENV_FILE}" 2>/dev/null | cut -d= -f2- || true)"
+    extra="${extra:-${defaults}}"
   fi
   printf '%s' "${extra}"
 }
@@ -41,7 +42,10 @@ resolve_agent_raw() {
 
   versions_dir="${HOME}/.local/share/cursor-agent/versions"
   if [[ -d "${versions_dir}" ]]; then
-    latest="$(find "${versions_dir}" -mindepth 1 -maxdepth 1 -type d -printf '%f\n' 2>/dev/null | sort -V | tail -1 || true)"
+    latest="$(
+      find "${versions_dir}" -mindepth 1 -maxdepth 1 -type d -exec basename {} \; 2>/dev/null \
+        | sort -V | tail -1 || true
+    )"
     if [[ -n "${latest}" && -x "${versions_dir}/${latest}/cursor-agent" ]]; then
       echo "${versions_dir}/${latest}/cursor-agent"
       return 0
