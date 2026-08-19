@@ -1,0 +1,78 @@
+#!/usr/bin/env bash
+# Launch Cursor (or agent) under a shared systemd user slice with CPU/RAM caps.
+set -euo pipefail
+
+CURSOR_BIN="${CURSOR_BIN:-/usr/share/cursor/cursor}"
+AGENT_BIN="${AGENT_BIN:-$HOME/.local/bin/agent-raw}"
+
+# --- tunables (override via env) -------------------------------------------
+: "${CURSOR_CPU_QUOTA:=700%}"          # ~7 of 8 cores on an 8-thread box
+: "${CURSOR_MEMORY_MAX:=18G}"
+: "${CURSOR_MEMORY_HIGH:=14G}"
+: "${CURSOR_TASKS_MAX:=768}"
+: "${CURSOR_NICE:=5}"
+: "${CURSOR_SLICE:=cursor.slice}"
+: "${RIPGREP_THREADS:=4}"
+
+usage() {
+  cat <<'EOF'
+Usage: cursor-cgwrap [cursor|agent] [args...]
+
+Runs Cursor or the CLI agent under ~/.config/systemd/user/cursor.slice.
+
+  agent          → wrapped by default (via ~/.local/bin/agent)
+  agent-raw      → bypass limits (escape hatch)
+
+Override for one launch:
+  CURSOR_MEMORY_MAX=12G CURSOR_CPU_QUOTA=500% cursor-cgwrap cursor .
+
+Reload slice limits after editing cursor.slice:
+  systemctl --user daemon-reload
+EOF
+}
+
+if [[ "${1:-}" == "-h" || "${1:-}" == "--help" ]]; then
+  usage
+  exit 0
+fi
+
+mode="cursor"
+if [[ "${1:-}" == "cursor" || "${1:-}" == "agent" ]]; then
+  mode="$1"
+  shift
+fi
+
+if ! command -v systemd-run >/dev/null 2>&1; then
+  echo "cursor-cgwrap: systemd-run not found; launching without limits" >&2
+  case "$mode" in
+    agent) exec "$AGENT_BIN" "$@" ;;
+    *) exec "$CURSOR_BIN" "$@" ;;
+  esac
+fi
+
+props=(
+  "Slice=${CURSOR_SLICE}"
+  "CPUQuota=${CURSOR_CPU_QUOTA}"
+  "MemoryMax=${CURSOR_MEMORY_MAX}"
+  "MemoryHigh=${CURSOR_MEMORY_HIGH}"
+  "TasksMax=${CURSOR_TASKS_MAX}"
+  "Delegate=yes"
+)
+
+prop_args=()
+for p in "${props[@]}"; do
+  prop_args+=(-p "$p")
+done
+
+case "$mode" in
+  agent)
+    exec systemd-run --user --scope --nice="$CURSOR_NICE" "${prop_args[@]}" \
+      env RIPGREP_THREADS="$RIPGREP_THREADS" \
+      "$AGENT_BIN" "$@"
+    ;;
+  *)
+    exec systemd-run --user --scope --nice="$CURSOR_NICE" "${prop_args[@]}" \
+      env RIPGREP_THREADS="$RIPGREP_THREADS" \
+      "$CURSOR_BIN" "$@"
+    ;;
+esac

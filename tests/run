@@ -1,0 +1,29 @@
+#!/usr/bin/env bash
+# Local test runner (also used by CI).
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+cd "${ROOT}"
+
+fail=0
+run() {
+  local name="$1"
+  shift
+  echo "==> ${name}"
+  if "$@"; then
+    echo "OK  ${name}"
+  else
+    echo "FAIL ${name}" >&2
+    fail=1
+  fi
+}
+
+run install bash tests/test_install.sh
+run cgwrap-fallback bash tests/test_cgwrap_fallback.sh
+run shellcheck bash tests/test_shellcheck.sh
+
+if [[ "${fail}" -ne 0 ]]; then
+  echo "FAILED" >&2
+  exit 1
+fi
+echo "All tests passed."
