@@ -92,8 +92,22 @@ render_inotify_sysctl() {
   sed "s/@MAX_USER_WATCHES@/${min_watches}/g" "${template}"
 }
 
+read_inotify_max_from_dropin() {
+  local dst="$1"
+  local line value
+  line="$(grep -E '^[[:space:]]*fs\.inotify\.max_user_watches=' "${dst}" 2>/dev/null | tail -1 || true)"
+  value="${line#*=}"
+  value="${value//[[:space:]]/}"
+  echo "${value}"
+}
+
+install_rendered_inotify_sysctl() {
+  local dst="$1" rendered_tmp="$2"
+  pkexec bash -c "install -d \"$(dirname "${dst}")\" && install -m 0644 \"${rendered_tmp}\" \"${dst}\" && sysctl --system >/dev/null"
+}
+
 maybe_install_inotify_sysctl() {
-  local min_watches current dst rendered_tmp
+  local min_watches current dst rendered_tmp dst_value
   dst="$(inotify_sysctl_dst)"
   min_watches="$(read_inotify_min)"
   validate_inotify_min "${min_watches}"
@@ -109,11 +123,25 @@ maybe_install_inotify_sysctl() {
     return 0
   fi
 
-  if [[ "${current}" -ge "${min_watches}" ]] && { [[ ! -f "${dst}" ]] || cmp -s "${rendered_tmp}" "${dst}"; }; then
+  if [[ -f "${dst}" ]] && cmp -s "${rendered_tmp}" "${dst}"; then
+    if [[ "${current}" -lt "${min_watches}" ]]; then
+      echo "install.sh: applying existing ${dst} (current max_user_watches=${current})..." >&2
+      pkexec sysctl --system >/dev/null
+    fi
     return 0
   fi
 
   if [[ -f "${dst}" ]] && ! cmp -s "${rendered_tmp}" "${dst}"; then
+    dst_value="$(read_inotify_max_from_dropin "${dst}")"
+    if [[ -n "${dst_value}" && "${dst_value}" =~ ^[0-9]+$ && "${dst_value}" -le "${min_watches}" ]]; then
+      if [[ "${dst_value}" == "${min_watches}" ]]; then
+        echo "install.sh: upgrading ${dst} to current template (max_user_watches=${min_watches})..." >&2
+      else
+        echo "install.sh: raising ${dst} to max_user_watches=${min_watches}..." >&2
+      fi
+      install_rendered_inotify_sysctl "${dst}" "${rendered_tmp}"
+      return 0
+    fi
     echo "install.sh: note: custom ${dst} present; applying sysctl --system without overwriting." >&2
     pkexec sysctl --system >/dev/null
     current="$(cat /proc/sys/fs/inotify/max_user_watches 2>/dev/null || echo 0)"
@@ -124,15 +152,13 @@ maybe_install_inotify_sysctl() {
     return 0
   fi
 
-  if [[ -f "${dst}" ]] && cmp -s "${rendered_tmp}" "${dst}"; then
-    echo "install.sh: applying existing ${dst} (current max_user_watches=${current})..." >&2
-    pkexec sysctl --system >/dev/null
+  if [[ "${current}" -ge "${min_watches}" ]]; then
     return 0
   fi
 
   echo "Installing ${dst} (max_user_watches ${current} -> ${min_watches})..."
   echo "  Approve the PolicyKit prompt for estelle-cursor-limits sysctl."
-  pkexec bash -c "install -d \"$(dirname "${dst}")\" && install -m 0644 \"${rendered_tmp}\" \"${dst}\" && sysctl --system >/dev/null"
+  install_rendered_inotify_sysctl "${dst}" "${rendered_tmp}"
 }
 
 install -d "${BIN_DIR}" "${UNIT_DIR}" "${APPS_DIR}" "${CONF_DIR}"

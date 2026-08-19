@@ -3,29 +3,14 @@
 set -euo pipefail
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+# shellcheck source=lib/setup_home.sh
+source "${ROOT}/tests/lib/setup_home.sh"
 TMP="$(mktemp -d)"
 trap 'rm -rf "${TMP}"' EXIT
 
 fail() {
   echo "test_inotify_min: $*" >&2
   exit 1
-}
-
-setup_home() {
-  export HOME="${TMP}/home"
-  export XDG_CONFIG_HOME="${HOME}/.config"
-  export XDG_DATA_HOME="${HOME}/.local/share"
-  export XDG_RUNTIME_DIR="${TMP}/runtime"
-  export SKIP_INOTIFY_SYSCTL=1
-  mkdir -p "${HOME}/.local/share/cursor-agent/versions/2099.01.01-test"
-  cat >"${HOME}/.local/share/cursor-agent/versions/2099.01.01-test/cursor-agent" <<'EOF'
-#!/usr/bin/env bash
-echo cursor-agent-stub "$@"
-EOF
-  chmod +x "${HOME}/.local/share/cursor-agent/versions/2099.01.01-test/cursor-agent"
-  mkdir -p "${XDG_RUNTIME_DIR}"
-  chmod 700 "${XDG_RUNTIME_DIR}"
-  mkdir -p "${HOME}/.config/cursor-limits"
 }
 
 expect_invalid() {
@@ -39,7 +24,10 @@ expect_invalid() {
     || fail "unexpected error for ${value}: $(cat "${TMP}/err.txt")"
 }
 
-setup_home
+estelle_test_setup_home "${TMP}"
+export SKIP_INOTIFY_SYSCTL=1
+mkdir -p "${HOME}/.config/cursor-limits"
+
 expect_invalid 'abc' 'must be a positive integer'
 expect_invalid '0' 'must be greater than zero'
 expect_invalid '-1' 'must be a positive integer'

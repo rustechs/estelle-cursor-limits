@@ -13,5 +13,6 @@ mapfile -t scripts < <(
     ! -path '*/tests/test_*.sh' -executable | sort
 )
 mapfile -t test_scripts < <(find "${ROOT}/tests" -maxdepth 2 -type f -name '*.sh' -executable | sort)
-shellcheck "${scripts[@]}" "${test_scripts[@]}"
+mapfile -t test_libs < <(find "${ROOT}/tests/lib" -maxdepth 1 -type f -name '*.sh' | sort)
+shellcheck -x -P "${ROOT}/tests" "${scripts[@]}" "${test_libs[@]}" "${test_scripts[@]}"
 echo "shellcheck passed"
