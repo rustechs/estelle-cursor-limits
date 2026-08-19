@@ -90,7 +90,11 @@ else
   echo "Keeping existing ${CURSORIGNORE_DST} (set FORCE_CURSORIGNORE=1 to replace)."
 fi
 
-systemctl --user daemon-reload || die "systemctl --user daemon-reload failed (is the user session running?)"
+if systemctl --user daemon-reload >/dev/null 2>&1; then
+  :
+else
+  echo "install.sh: warning: systemctl --user unavailable; skipped daemon-reload." >&2
+fi
 
 echo "Installed estelle-cursor-limits."
 echo "  Launch IDE from app menu or: cursor-cgwrap cursor"
