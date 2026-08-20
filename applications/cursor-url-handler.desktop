@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Cursor URL Handler
+Exec=@HOME@/.local/bin/cursor-cgwrap cursor @EXTRA_ARGS@ --open-url %U
+Icon=co.anysphere.cursor
+Type=Application
+NoDisplay=true
+StartupNotify=false
+MimeType=x-scheme-handler/cursor;

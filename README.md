@@ -14,9 +14,11 @@ Complements the global Cursor rule in
 |---|---|
 | `cursor.slice` | Shared cgroup: **700% CPU** (~7/8 cores), **18G** hard / **14G** soft RAM, **768** tasks |
 | `cursor-cgwrap` | Launches Cursor or `agent-raw` inside the slice via `systemd-run` |
+| `cursor-launch.sh` | Caps Electron's `app-org.chromium.Chromium-PID.scope` after IDE startup |
 | `agent` | Wrapper → `cursor-cgwrap agent` (default terminal entrypoint) |
 | `agent-raw` | Symlink to real `cursor-agent` (escape hatch) |
 | `cursor.desktop` | User override so the app menu launches through `cursor-cgwrap` |
+| `cursor-url-handler.desktop` | User override for `cursor://` links through `cursor-cgwrap` |
 | `sysctl/99-estelle-cursor-inotify.conf` | Optional system limit for `fs.inotify.max_user_watches` (from `CURSOR_INOTIFY_MIN_WATCHES`, default 524288) |
 
 Default limits target an 8-core / 32 GiB box with browser + VM always running.
@@ -26,30 +28,37 @@ Default limits target an 8-core / 32 GiB box with browser + VM always running.
 | Goal | Edit |
 |---|---|
 | Aggregate cap for all Cursor scopes | `~/.config/systemd/user/cursor.slice`, then `systemctl --user daemon-reload` |
-| Default per-launch ceiling (installed copy) | `bin/cursor-cgwrap` defaults / reinstall |
+| Default per-launch ceiling (installed copy) | `bin/cursor-cgwrap` and `bin/cursor-launch.sh` defaults / reinstall |
 | One-shot override | env vars below |
+| Electron IDE scope fix | `bin/cursor-launch.sh` (via `cursor-cgwrap cursor`) |
 
 Override per launch:
 
 ```bash
 CURSOR_MEMORY_MAX=12G CURSOR_CPU_QUOTA=500% cursor-cgwrap cursor .
+CURSOR_ELECTRON_SCOPE_FIX=0 cursor-cgwrap cursor .   # skip Electron scope cap
+CURSOR_ELECTRON_SCOPE_WAIT_SECS=10 cursor-cgwrap cursor .
+CURSOR_LAUNCH=/path/to/custom-launch.sh cursor-cgwrap cursor .
 ```
 
 ## Layout
 
 ```text
 bin/cursor-cgwrap          launcher under cursor.slice
+bin/cursor-launch.sh       cap Electron's transient Chromium scope
 bin/agent                  wrapped agent entrypoint
 systemd/cursor.slice       user slice unit
 etc/cursor-limits.env      desktop extra args (Wayland on estelle)
 etc/cursorignore.example   optional ~/.cursorignore template
 sysctl/99-estelle-cursor-inotify.conf   optional inotify watch ceiling
 applications/cursor.desktop   @HOME@ / @EXTRA_ARGS@ template
+applications/cursor-url-handler.desktop   URL handler template
 contrib/bashrc.snippet     agent-unlimited alias
 ```
 
 Installed paths: `~/.local/bin/`, `~/.config/systemd/user/`, optional
-`~/.local/share/applications/cursor.desktop`, `~/.cursorignore`.
+`~/.local/share/applications/cursor.desktop`,
+`~/.local/share/applications/cursor-url-handler.desktop`, `~/.cursorignore`.
 
 ## Requirements
 
@@ -96,6 +105,12 @@ SKIP_INOTIFY_SYSCTL=1 ~/git/estelle-cursor-limits/install.sh
 ```bash
 systemctl --user status cursor.slice
 systemctl --user show cursor.slice | grep -E '^(MemoryMax|CPUQuota|TasksMax)='
+# After launching the IDE, Electron scope should inherit the same caps:
+pid=$(pgrep -n -f '/usr/share/cursor/cursor --ozone-platform' || true)
+if [[ -n "${pid}" ]]; then
+  systemctl --user show "app-org.chromium.Chromium-${pid}.scope" \
+    | grep -E '^(MemoryMax|CPUQuota)='
+fi
 cursor-cgwrap --help
 type agent agent-raw
 sysctl fs.inotify.max_user_watches

@@ -23,6 +23,7 @@ test -f "${HOME}/.config/systemd/user/cursor.slice" || fail "precondition: curso
 bash "${ROOT}/uninstall.sh" >/dev/null
 
 test ! -e "${HOME}/.local/bin/cursor-cgwrap" || fail "cursor-cgwrap not removed"
+test ! -e "${HOME}/.local/bin/cursor-launch.sh" || fail "cursor-launch.sh not removed"
 test ! -e "${HOME}/.local/bin/agent" || fail "agent wrapper not removed"
 test ! -e "${HOME}/.config/systemd/user/cursor.slice" || fail "cursor.slice not removed"
 test ! -d "${HOME}/.config/cursor-limits" || fail "cursor-limits config dir not removed"
@@ -35,6 +36,8 @@ echo 'desktop-sentinel' >"${HOME}/.local/share/applications/cursor.desktop"
 echo 'ignore-sentinel' >"${HOME}/.cursorignore"
 REMOVE_CURSOR_DESKTOP=1 REMOVE_CURSORIGNORE=1 bash "${ROOT}/uninstall.sh" >/dev/null
 test ! -f "${HOME}/.local/share/applications/cursor.desktop" || fail "desktop not removed"
+test ! -f "${HOME}/.local/share/applications/cursor-url-handler.desktop" \
+  || fail "url-handler desktop not removed"
 test ! -f "${HOME}/.cursorignore" || fail "cursorignore not removed"
 
 # Sysctl install/removal via mock pkexec and test-only sysctl path

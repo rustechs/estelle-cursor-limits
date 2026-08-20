@@ -17,6 +17,7 @@ bash "${ROOT}/install.sh" >"${TMP}/install-out.txt" 2>&1 || {
 }
 
 test -x "${HOME}/.local/bin/cursor-cgwrap" || fail "cursor-cgwrap missing"
+test -x "${HOME}/.local/bin/cursor-launch.sh" || fail "cursor-launch.sh missing"
 test -x "${HOME}/.local/bin/agent" || fail "agent wrapper missing"
 test -L "${HOME}/.local/bin/agent-raw" || fail "agent-raw symlink missing"
 grep -q 'cursor-agent-stub' "${HOME}/.local/bin/agent-raw" || readlink "${HOME}/.local/bin/agent-raw" | grep -q cursor-agent
@@ -25,18 +26,27 @@ grep -q 'MemoryMax=18G' "${HOME}/.config/systemd/user/cursor.slice"
 test -f "${HOME}/.local/share/applications/cursor.desktop"
 grep -F "Exec=${HOME}/.local/bin/cursor-cgwrap cursor --ozone-platform=wayland" \
   "${HOME}/.local/share/applications/cursor.desktop"
+test -f "${HOME}/.local/share/applications/cursor-url-handler.desktop"
+grep -F "Exec=${HOME}/.local/bin/cursor-cgwrap cursor --ozone-platform=wayland" \
+  "${HOME}/.local/share/applications/cursor-url-handler.desktop"
+grep -e '--open-url %U' "${HOME}/.local/share/applications/cursor-url-handler.desktop"
 test -f "${HOME}/.cursorignore"
 grep -q 'worktrees' "${HOME}/.cursorignore"
 test -f "${HOME}/.config/cursor-limits/env"
 
 # Second install keeps custom desktop unless forced
 echo 'sentinel=desktop' > "${HOME}/.local/share/applications/cursor.desktop"
+echo 'sentinel=url-handler' > "${HOME}/.local/share/applications/cursor-url-handler.desktop"
 bash "${ROOT}/install.sh" >/dev/null
 grep -q 'sentinel=desktop' "${HOME}/.local/share/applications/cursor.desktop"
+grep -q 'sentinel=url-handler' "${HOME}/.local/share/applications/cursor-url-handler.desktop"
 
 FORCE_CURSOR_DESKTOP=1 bash "${ROOT}/install.sh" >/dev/null
 if grep -q 'sentinel=desktop' "${HOME}/.local/share/applications/cursor.desktop"; then
   fail "FORCE_CURSOR_DESKTOP did not replace desktop file"
+fi
+if grep -q 'sentinel=url-handler' "${HOME}/.local/share/applications/cursor-url-handler.desktop"; then
+  fail "FORCE_CURSOR_DESKTOP did not replace url-handler desktop file"
 fi
 
 # Migration: existing raw agent before wrapper install (fresh HOME)
