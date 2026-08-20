@@ -3,6 +3,12 @@
 set -euo pipefail
 
 CURSOR_BIN="${CURSOR_BIN:-/usr/share/cursor/cursor}"
+if [[ "${BASH_SOURCE[0]}" == /* ]]; then
+  _CGWRAP_DIR="${BASH_SOURCE[0]%/*}"
+else
+  _CGWRAP_DIR="${HOME}/.local/bin"
+fi
+CURSOR_LAUNCH="${CURSOR_LAUNCH:-${_CGWRAP_DIR}/cursor-launch.sh}"
 AGENT_BIN="${AGENT_BIN:-$HOME/.local/bin/agent-raw}"
 
 # --- tunables (override via env) -------------------------------------------
@@ -46,7 +52,7 @@ if ! command -v systemd-run >/dev/null 2>&1; then
   echo "cursor-cgwrap: systemd-run not found; launching without limits" >&2
   case "$mode" in
     agent) exec "$AGENT_BIN" "$@" ;;
-    *) exec "$CURSOR_BIN" "$@" ;;
+    *) exec "$CURSOR_LAUNCH" "$@" ;;
   esac
 fi
 
@@ -73,6 +79,6 @@ case "$mode" in
   *)
     exec systemd-run --user --scope --nice="$CURSOR_NICE" "${prop_args[@]}" \
       env RIPGREP_THREADS="$RIPGREP_THREADS" \
-      "$CURSOR_BIN" "$@"
+      "$CURSOR_LAUNCH" "$@"
     ;;
 esac

@@ -8,11 +8,11 @@ APPS_DIR="${HOME}/.local/share/applications"
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/cursor-limits"
 SYSCTL_DST="${ESTELLE_SYSCTL_DST:-/etc/sysctl.d/99-estelle-cursor-inotify.conf}"
 
-rm -f "${BIN_DIR}/cursor-cgwrap" "${BIN_DIR}/agent"
+rm -f "${BIN_DIR}/cursor-cgwrap" "${BIN_DIR}/cursor-launch.sh" "${BIN_DIR}/agent"
 # Leave agent-raw pointing at cursor-agent — other tools may still use it.
 
 if [[ "${REMOVE_CURSOR_DESKTOP:-}" == "1" ]]; then
-  rm -f "${APPS_DIR}/cursor.desktop"
+  rm -f "${APPS_DIR}/cursor.desktop" "${APPS_DIR}/cursor-url-handler.desktop"
 fi
 
 if [[ "${REMOVE_CURSORIGNORE:-}" == "1" ]]; then

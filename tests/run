@@ -24,6 +24,7 @@ run sysctl-template bash tests/test_sysctl_template.sh
 run sysctl-upgrade bash tests/test_sysctl_upgrade.sh
 run inotify-min bash tests/test_inotify_min.sh
 run cgwrap-fallback bash tests/test_cgwrap_fallback.sh
+run cursor-launch bash tests/test_cursor_launch.sh
 run shellcheck bash tests/test_shellcheck.sh
 
 if [[ "${fail}" -ne 0 ]]; then

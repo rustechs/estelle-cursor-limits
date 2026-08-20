@@ -9,6 +9,7 @@ APPS_DIR="${HOME}/.local/share/applications"
 CONF_DIR="${XDG_CONFIG_HOME:-$HOME/.config}/cursor-limits"
 ENV_FILE="${CONF_DIR}/env"
 DESKTOP_DST="${APPS_DIR}/cursor.desktop"
+URL_HANDLER_DST="${APPS_DIR}/cursor-url-handler.desktop"
 CURSORIGNORE_DST="${HOME}/.cursorignore"
 
 die() {
@@ -171,6 +172,7 @@ else
 fi
 
 install -m 0755 "${ROOT}/bin/cursor-cgwrap" "${BIN_DIR}/cursor-cgwrap"
+install -m 0755 "${ROOT}/bin/cursor-launch.sh" "${BIN_DIR}/cursor-launch.sh"
 install -m 0755 "${ROOT}/bin/agent" "${BIN_DIR}/agent"
 install -m 0644 "${ROOT}/systemd/cursor.slice" "${UNIT_DIR}/cursor.slice"
 
@@ -184,6 +186,16 @@ if [[ ! -f "${DESKTOP_DST}" || "${FORCE_CURSOR_DESKTOP:-}" == "1" ]]; then
   chmod 0644 "${DESKTOP_DST}"
 else
   echo "Keeping existing ${DESKTOP_DST} (set FORCE_CURSOR_DESKTOP=1 to replace)."
+fi
+
+if [[ ! -f "${URL_HANDLER_DST}" || "${FORCE_CURSOR_DESKTOP:-}" == "1" ]]; then
+  sed \
+    -e "s|@HOME@|${HOME}|g" \
+    -e "s|@EXTRA_ARGS@|${EXTRA_ARGS}|g" \
+    "${ROOT}/applications/cursor-url-handler.desktop" >"${URL_HANDLER_DST}"
+  chmod 0644 "${URL_HANDLER_DST}"
+else
+  echo "Keeping existing ${URL_HANDLER_DST} (set FORCE_CURSOR_DESKTOP=1 to replace)."
 fi
 
 if [[ ! -f "${CURSORIGNORE_DST}" || "${FORCE_CURSORIGNORE:-}" == "1" ]]; then
